@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../prisma.js';
+import { AppError, AppRequest } from '../types.js';
 
 export async function getAllPost(
     req: Request,
@@ -20,18 +21,18 @@ export async function getAllPost(
 }
 
 export async function createNewPost(
-    req: Request,
+    req: AppRequest,
     res: Response,
     next: NextFunction
 ) {
-    const { title, content, location, category, authorEmail } = req.body;
+    const { title, content, location, category } = req.body;
     try {
         const post = await prisma.post.create({
             data: {
                 title: title,
                 content: content,
                 location: location,
-                authorEmail: authorEmail,
+                authorEmail: req.user.email,
                 category: category,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
@@ -44,7 +45,7 @@ export async function createNewPost(
 }
 
 export async function updatePost(
-    req: Request,
+    req: AppRequest,
     res: Response,
     next: NextFunction
 ) {
@@ -60,11 +61,26 @@ export async function updatePost(
         res.status(400).json({ message: 'Invalid post id' });
         return;
     }
+    // check if post that is being edited is by the same user
+    try {
+        const toEdit = await prisma.post.findFirst({
+            where: {
+                id: id
+            }
+        })
+
+        if (toEdit.authorEmail !== req.user.email) {
+            return next(new AppError(406, "Not Acceptable"))
+        }
+    } catch (error) {
+        return next(error)
+    }
 
     try {
         const post = await prisma.post.update({
             where: {
                 id: id,
+                authorEmail: req.user.email
             },
             data: {
                 title: title,
@@ -85,7 +101,7 @@ export async function updatePost(
 }
 
 export async function deletePost(
-    req: Request,
+    req: AppRequest,
     res: Response,
     next: NextFunction
 ) {
@@ -98,6 +114,21 @@ export async function deletePost(
     if (isNaN(id)) {
         res.status(400).json({ message: 'Invalid post id' });
         return;
+    }
+
+    // check if post that is being deleted is by the same user
+    try {
+        const toEdit = await prisma.post.findFirst({
+            where: {
+                id: id
+            }
+        })
+
+        if (toEdit.authorEmail !== req.user.email) {
+            return next(new AppError(406, "Not Acceptable"))
+        }
+    } catch (error) {
+        return next(error)
     }
 
     try {

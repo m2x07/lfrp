@@ -16,7 +16,8 @@ export async function login(req: Request, res: Response, next: NextFunction) {
                 email: e,
             },
         });
-        res.json(user);
+        const encoded = jwt.sign({ "email": user.email, "role": user.role }, config.jwtSecret)
+        res.json({ "auth_token": encoded });
     } catch (error) {
         if (error.code === 'ERR_DLOPEN_FAILED') {
             next(new AppError(400, 'user non-existent'));
