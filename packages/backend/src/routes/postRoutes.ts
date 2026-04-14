@@ -5,12 +5,13 @@ import {
     getAllPost,
     updatePost,
 } from '../controllers/postController.js';
+import { authHandler } from '../middlewares/authHandler.js';
 
 const postRouter = Router();
 
-postRouter.get('/', getAllPost);
-postRouter.post('/', createNewPost);
-postRouter.put('/:id', updatePost);
-postRouter.delete('/:id', deletePost);
+postRouter.get('/', authHandler, getAllPost);
+postRouter.post('/', authHandler, createNewPost);
+postRouter.put('/:id', authHandler, updatePost);
+postRouter.delete('/:id', authHandler, deletePost);
 
 export default postRouter;

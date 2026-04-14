@@ -1,25 +1,20 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Response } from 'express';
 import config from './config/config.js';
+import { authHandler } from './middlewares/authHandler.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 import { prisma } from './prisma.js';
 import postRouter from './routes/postRoutes.js';
-import userRouter from './routes/userRoutes.js';
-import { errorHandler } from './middlewares/errorHandler.js';
-import { AppRequest, authHandler } from './middlewares/authHandler.js';
+import { AppRequest } from './types.js';
+import authRouter from './routes/authRoutes.js';
 
 const app = express();
 app.use(express.json());
 
 app.get('/ping', authHandler, (req: AppRequest, res: Response) => {
-    if (req.user) {
-        console.log('this is the decoded data');
-        console.log(req.user);
-        res.send('ok');
-    } else {
-        res.status(401).json({ message: 'no auth token found' });
-    }
+    res.send(`PING! @ ${new Date().toLocaleString()}`);
 });
+app.use('/api/auth', authRouter);
 app.use('/api/post', postRouter);
-app.use('/api/user', userRouter);
 app.use(errorHandler);
 
 async function main() {

@@ -23,14 +23,14 @@ All backend commands run from `packages/backend/`:
 
 ## Build prerequisites
 
-`npx prisma generate` must run before `npm run build`. The generated client goes to `src/generated/prisma/` (gitignored) and is consumed by `src/prisma.ts`.
+`npx prisma generate` must run before `npm run build`. The generated client goes to `src/generated/prisma/` (gitignored) and is consumed by `src/prisma.ts`. The Prisma schema specifies `moduleFormat = "esm"` and `importFileExtension = "js"` to match the backend's ESM setup — source files import from `./generated/prisma/client.js` (with `.js` extension on `.ts` files).
 
 ## Architecture notes
 
 - **Entrypoint:** `src/server.ts` → Express app setup + `main()` function.
 - **Module type mismatch:** Root `package.json` uses `"type": "commonjs"` but the backend uses `"type": "module"` (ESM). tsconfig sets `module: "ESNext"`.
-- **tsconfig:** `strict: false`. `noUncheckedIndexedAccess: true` is on. TypeScript 6.x with `ignoreDeprecations: "6.0"`.
-- **Prisma adapter:** Uses `@prisma/adapter-better-sqlite3` (not the default Node adapter). See `src/prisma.ts`.
+- **tsconfig:** `strict: false`. `noUncheckedIndexedAccess: true` is on. `"types": []` — `@types/node` is explicitly excluded (you'll get "Cannot find name 'process'" errors unless you add it or use `import.meta.env`). TypeScript 6.x with `ignoreDeprecations: "6.0"`.
+- **Prisma adapter:** Uses `@prisma/adapter-better-sqlite3` (not the default Node adapter). See `src/prisma.ts`. Prisma 7 with `prisma-client` generator (not the legacy `prisma-client-js`).
 - **Soft delete:** `deletePost` sets `published: false`, does not delete the row.
 - **Auth incomplete:** `authController.ts` is empty. `authHandler` middleware (JWT) exists but is only applied to `GET /ping`. All `/api/*` routes are unprotected.
 - **No input validation** on any route; request body fields are destructured directly.
@@ -48,5 +48,6 @@ All backend commands run from `packages/backend/`:
 ## Gotchas
 
 - `node_modules`, `dist/`, `src/generated/prisma/`, `.env`, and `dev.db` are gitignored but several are currently staged for a first commit.
+- Root `.gitignore` only covers `node_modules`. The backend has its own `.gitignore` for `dist/`, `.env`, `dev.db`, and `src/generated/prisma/`. Running `git add .` from root can accidentally stage secrets.
 - `prisma.config.ts` at backend root is the Prisma config (not the old-style `prisma/schema.prisma` datasource block alone).
 - Frontend workspace is empty — don't look for code there.
