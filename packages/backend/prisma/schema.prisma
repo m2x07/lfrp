@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+    provider = "prisma-client"
+    output   = "../src/generated/prisma"
+    moduleFormat = "esm"
+    importFileExtension = "js"
+}
+
+datasource db {
+    provider = "sqlite"
+}
+
+model User {
+    id            Int      @id @default(autoincrement())
+    email         String   @unique
+    name          String
+    contactNumber Int
+    createdAt     DateTime @default(now())
+    posts         Post[]
+    role          Role     @default(USER)
+}
+
+model Post {
+    id          Int       @id @default(autoincrement())
+    title       String
+    content     String?
+    location    String
+    published   Boolean   @default(true)
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @default(now())
+    category    Category?
+    author      User?     @relation(fields: [authorEmail], references: [email])
+    authorEmail String?
+    attachments String?
+}
+
+enum Category {
+    VALUABLES
+    JEWELLERY
+    APPARELS
+    EDUCATIONAL
+    ELECTRONICS
+}
+
+enum Role {
+    USER
+    ADMIN
+}
