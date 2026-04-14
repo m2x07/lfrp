@@ -4,9 +4,9 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-    provider = "prisma-client"
-    output   = "../src/generated/prisma"
-    moduleFormat = "esm"
+    provider            = "prisma-client"
+    output              = "../src/generated/prisma"
+    moduleFormat        = "esm"
     importFileExtension = "js"
 }
 
@@ -15,13 +15,14 @@ datasource db {
 }
 
 model User {
-    id            Int      @id @default(autoincrement())
-    email         String   @unique
+    id            Int           @id @default(autoincrement())
+    email         String        @unique
     name          String
     contactNumber Int
-    createdAt     DateTime @default(now())
+    createdAt     DateTime      @default(now())
     posts         Post[]
-    role          Role     @default(USER)
+    role          Role          @default(USER)
+    authRequests  AuthRequest[]
 }
 
 model Post {
@@ -36,6 +37,13 @@ model Post {
     author      User?     @relation(fields: [authorEmail], references: [email])
     authorEmail String?
     attachments String?
+}
+
+model AuthRequest {
+    id    Int    @id @default(autoincrement())
+    email String
+    e     User?  @relation(fields: [email], references: [email])
+    token String
 }
 
 enum Category {
