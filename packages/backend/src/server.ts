@@ -21,6 +21,16 @@ async function main() {
     app.listen(config.port, () => {
         console.log(`Server running on port ${config.port}`);
     });
+
+    // cleanup
+    setInterval(async () => {
+        const deleted = await prisma.authRequest.deleteMany({
+            where: { expiresAt: { lt: new Date() } },
+        });
+        if (deleted.count > 0) {
+            console.log(`Cleaned up ${deleted.count} expired auth request(s)`);
+        }
+    });
 }
 
 main()

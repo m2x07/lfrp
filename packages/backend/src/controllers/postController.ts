@@ -65,22 +65,22 @@ export async function updatePost(
     try {
         const toEdit = await prisma.post.findFirst({
             where: {
-                id: id
-            }
-        })
+                id: id,
+            },
+        });
 
         if (toEdit.authorEmail !== req.user.email) {
-            return next(new AppError(406, "Not Acceptable"))
+            return next(new AppError(406, 'Not Acceptable'));
         }
     } catch (error) {
-        return next(error)
+        return next(error);
     }
 
     try {
         const post = await prisma.post.update({
             where: {
                 id: id,
-                authorEmail: req.user.email
+                authorEmail: req.user.email,
             },
             data: {
                 title: title,
@@ -120,15 +120,15 @@ export async function deletePost(
     try {
         const toEdit = await prisma.post.findFirst({
             where: {
-                id: id
-            }
-        })
+                id: id,
+            },
+        });
 
         if (toEdit.authorEmail !== req.user.email) {
-            return next(new AppError(406, "Not Acceptable"))
+            return next(new AppError(406, 'Not Acceptable'));
         }
     } catch (error) {
-        return next(error)
+        return next(error);
     }
 
     try {

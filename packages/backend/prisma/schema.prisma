@@ -15,14 +15,15 @@ datasource db {
 }
 
 model User {
-    id            Int           @id @default(autoincrement())
-    email         String        @unique
+    id            Int          @id @default(autoincrement())
+    email         String       @unique
     name          String
     contactNumber Int
-    createdAt     DateTime      @default(now())
+    createdAt     DateTime     @default(now())
     posts         Post[]
-    role          Role          @default(USER)
-    authRequests  AuthRequest[]
+    role          Role         @default(USER)
+    verified      Boolean      @default(false)
+    authRequest   AuthRequest?
 }
 
 model Post {
@@ -40,10 +41,12 @@ model Post {
 }
 
 model AuthRequest {
-    id    Int    @id @default(autoincrement())
-    email String
-    e     User?  @relation(fields: [email], references: [email])
-    token String
+    id        Int      @id @default(autoincrement())
+    email     String   @unique
+    user      User?    @relation(fields: [email], references: [email])
+    token     String   @unique
+    createdAt DateTime @default(now())
+    expiresAt DateTime
 }
 
 enum Category {
