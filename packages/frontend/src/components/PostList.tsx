@@ -1,4 +1,4 @@
-import { useDeferredValue, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { useLocation } from 'wouter';
@@ -10,6 +10,7 @@ import {
     NativeSelectOption,
 } from '@/components/ui/native-select';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { getEmailFromToken } from '@/lib/auth';
 
 const CATEGORIES = [
     'ALL',
@@ -28,8 +29,10 @@ interface PostData {
     content: string | null;
     type: 'LOST' | 'FOUND';
     location: string;
+    category: string | null;
+    authorEmail: string | null;
     createdAt: string;
-    author: { name: string } | null;
+    author: { name: string; contactNumber: number } | null;
     attachments: string[];
 }
 
@@ -71,6 +74,7 @@ export function PostList() {
     const [category, setCategory] = useState<Category>('ALL');
     const [search, setSearch] = useState('');
     const deferredSearch = useDeferredValue(search);
+    const currentUserEmail = useMemo(() => getEmailFromToken(), []);
 
     const { data: posts, isLoading } = useQuery({
         queryKey: ['posts', type, category, deferredSearch],
@@ -134,11 +138,16 @@ export function PostList() {
             {posts?.map((post) => (
                 <Post
                     key={post.id}
+                    id={post.id}
                     userName={post.author?.name ?? 'Unknown'}
+                    contactNumber={post.author?.contactNumber ?? null}
+                    authorEmail={post.authorEmail}
+                    currentUserEmail={currentUserEmail}
                     status={post.type}
                     title={post.title}
                     description={post.content ?? ''}
                     location={post.location}
+                    category={post.category}
                     timestamp={getRelativeTime(post.createdAt)}
                     images={post.attachments}
                 />

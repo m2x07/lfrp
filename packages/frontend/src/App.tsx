@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import NewPost from './pages/NewPost';
+import UpdatePost from './pages/UpdatePost';
 import Home from './pages/Home';
 
 function App() {
@@ -17,6 +18,12 @@ function App() {
                 <Route path="/new">
                     <ProtectedRoute>
                         <NewPost />
+                    </ProtectedRoute>
+                </Route>
+
+                <Route path="/update">
+                    <ProtectedRoute>
+                        <UpdatePost />
                     </ProtectedRoute>
                 </Route>
 

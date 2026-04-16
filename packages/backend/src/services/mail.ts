@@ -21,7 +21,7 @@ function loadTemplate(filename: string): string {
 }
 
 export async function sendMagicLink(email: string, token: string) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.AUTH_VERIFY_URL || 'http://localhost:3000';
     const magicLink = `${frontendUrl}/api/auth/verify?token=${token}`;
 
     const html = loadTemplate('magic-link.html').replace(

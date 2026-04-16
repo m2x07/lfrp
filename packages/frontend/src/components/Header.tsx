@@ -10,6 +10,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { getEmailFromToken } from '@/lib/auth';
 
 const AVATAR_COLORS = [
     'bg-rose-500',
@@ -23,17 +24,6 @@ const AVATAR_COLORS = [
     'bg-violet-500',
     'bg-pink-500',
 ];
-
-function getEmailFromToken(): string | null {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        return payload.email || null;
-    } catch {
-        return null;
-    }
-}
 
 function getColorForEmail(email: string): string {
     let hash = 0;

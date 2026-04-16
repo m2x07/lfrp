@@ -26,7 +26,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
             },
         });
         if (!user) {
-            return next(new AppError(404, "No such user found"))
+            return next(new AppError(404, 'No such user found'));
         }
         const encoded = jwt.sign(
             { email: user.email, role: user.role },
@@ -154,5 +154,6 @@ export async function verify(req: Request, res: Response, next: NextFunction) {
         }),
     ]);
 
-    res.json({ message: 'User verified successfully' });
+    // res.json({ message: 'User verified successfully' });
+    res.send('<h2>User verified successfully</h2>');
 }

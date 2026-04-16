@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, type Resolver } from 'react-hook-form';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 import * as z from 'zod';
@@ -24,17 +24,22 @@ import { Spinner } from '@/components/ui/spinner';
 const formSchema = z.object({
     email: z.string().email('Enter a valid email address.'),
     name: z.string().min(1, 'Name is required.'),
-    contactNumber: z.coerce
-        .number('Contact must be a number')
-        .int('Contact number must be a whole number')
-        .min(1111111111, 'Contact number invalid')
+    contactNumber: z.preprocess(
+        (val) => (val === '' || val === undefined ? undefined : Number(val)),
+        z
+            .number('Contact must be a number')
+            .int('Contact number must be a whole number')
+            .min(1111111111, 'Contact number invalid')
+    ),
 });
 
 function Register() {
     const [, setLocation] = useLocation();
 
     const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
+        resolver: zodResolver(formSchema) as Resolver<
+            z.infer<typeof formSchema>
+        >,
         defaultValues: {
             email: '',
             name: '',

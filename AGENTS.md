@@ -2,45 +2,64 @@
 
 ## Project overview
 
-Lost and Found Report Portal (LFRP). Express 5 + TypeScript + Prisma/SQLite monorepo. Only the backend (`packages/backend`) has source code; `packages/frontend` is an empty placeholder.
+Lost and Found Report Portal (LFRP). npm workspaces monorepo with two packages:
+
+- `packages/backend` — Express 5 + TypeScript + Prisma/SQLite (the primary codebase)
+- `packages/frontend` — Vite + React 19 + shadcn/ui + Tailwind v4 + wouter router
 
 ## Key commands
 
-All backend commands run from `packages/backend/`:
+**Backend** (run from `packages/backend/`):
 
-| Task                | Command                                                             |
-| ------------------- | ------------------------------------------------------------------- |
-| Dev server          | `npm run dev`                                                       |
-| Build               | `npm run build`                                                     |
-| Start (after build) | `npm start`                                                         |
-| Format              | `npm run format` (root or backend)                                  |
-| Prisma generate     | `npx prisma generate`                                               |
-| Prisma migrations   | `npx prisma migrate dev`                                            |
-| Prisma Studio       | `npm run prisma-studio` (wraps `npx -p better-sqlite3 -p prisma …`) |
-| Clean dist          | `npm run clean`                                                     |
+| Task              | Command                                                             |
+| ----------------- | ------------------------------------------------------------------- |
+| Dev server        | `npm run dev` (tsx watch)                                           |
+| Build             | `npm run build` (tsc + copies `src/templates/` → `dist/templates/`) |
+| Start (built)     | `npm start`                                                         |
+| Format            | `npm run format` (also available from root)                         |
+| Prisma generate   | `npx prisma generate`                                               |
+| Prisma migrations | `npx prisma migrate dev`                                            |
+| Prisma Studio     | `npm run prisma-studio`                                             |
+| Clean dist        | `npm run clean`                                                     |
 
-**No tests, no linter config, no CI exist yet.**
+**Frontend** (run from `packages/frontend/`):
+
+| Task  | Command              |
+| ----- | -------------------- |
+| Dev   | `npm run dev` (vite) |
+| Build | `npm run build`      |
+| Lint  | `npm run lint`       |
+
+No tests, no CI exist yet.
 
 ## Build prerequisites
 
-Run `npx prisma generate` before `npm run build`. The generated client goes to `src/generated/prisma/` (gitignored). Schema uses `moduleFormat = "esm"` and `importFileExtension = "js"` — source imports must use `./generated/prisma/client.js` (`.js` extension on `.ts` files).
+Run `npx prisma generate` before `npm run build`. Generated client → `src/generated/prisma/` (gitignored). Schema uses `moduleFormat = "esm"` and `importFileExtension = "js"` — all Prisma imports must use the `.js` extension even in `.ts` files.
 
-The build script also copies `src/templates/` into `dist/templates/` (for magic-link emails).
-
-## Architecture
+## Architecture (backend)
 
 - **Entrypoint:** `src/server.ts` — Express app + `main()`.
-- **Auth flow:** Magic-link registration (`POST /api/auth/register` → email → `GET /api/auth/verify`). Login returns a JWT directly (`POST /api/auth/login`). `GET /api/auth/status` checks verification. `authHandler` middleware (JWT) is applied to `/ping` and all `/api/post` routes. `GET /api/auth/*` routes are unprotected.
+- **Routes:** `src/routes/authRoutes.ts`, `src/routes/postRoutes.ts`.
+- **Controllers:** `src/controllers/authController.ts`, `src/controllers/postController.ts`.
+- **Auth flow:** Register (`POST /api/auth/register`) → magic-link email → `GET /api/auth/verify`. Login (`POST /api/auth/login`) returns JWT. `GET /api/auth/status` checks verification. `authHandler` middleware (JWT) protects `/ping` and all `/api/post` routes.
 - **Soft delete:** `deletePost` sets `published: false`, does not delete the row.
-- **Mail:** `src/services/mail.ts` sends magic-link emails via nodemailer + Gmail SMTP. Requires `SMTP_USER` and `SMTP_PASS` env vars.
-- **No input validation** on post routes; request body fields are destructured directly.
+- **Mail:** `src/services/mail.ts` via nodemailer + Gmail SMTP. Requires `SMTP_USER` and `SMTP_PASS`.
+- **Uploads:** multer file uploads served from `/uploads/images`. Config in `src/config/multer.ts`.
+- **No input validation** on post routes; body fields are destructured directly.
+
+## Architecture (frontend)
+
+- Vite + React 19, routing via `wouter`, data fetching via `@tanstack/react-query`.
+- shadcn/ui components in `src/components/ui/` (style: `radix-vega`). Use `npx shadcn add <component>` to add new ones.
+- Pages: `Home`, `Login`, `Register`, `NewPost`, `UpdatePost`.
+- Auth helpers in `src/lib/auth.ts`. Protected routes via `ProtectedRoute` component.
 
 ## Toolchain quirks
 
-- **Module type mismatch:** Root `package.json` uses `"type": "commonjs"` but backend uses `"type": "module"` (ESM). tsconfig sets `module: "ESNext"`.
-- **tsconfig:** `strict: false`, `noUncheckedIndexedAccess: true`, `"types": []`. The empty `types` array hides `@types/node`, so `process`, `Buffer`, etc. are unknown to TypeScript — code compiles because `strict: false` allows implicit `any`, but type safety on Node globals is absent. TypeScript 6.x with `ignoreDeprecations: "6.0"`.
-- **Prisma adapter:** Uses `@prisma/adapter-better-sqlite3` (not the default Node adapter). See `src/prisma.ts`. Prisma 7 with `prisma-client` generator (not legacy `prisma-client-js`).
-- **Prisma config:** `prisma.config.ts` at backend root (Prisma 7 style), not just the schema datasource block.
+- **Module type mismatch:** Root `package.json` is `"type": "commonjs"`, backend is `"type": "module"` (ESM). tsconfig: `module: "ESNext"`, `moduleResolution: "bundler"`.
+- **tsconfig:** `strict: false`, `noUncheckedIndexedAccess: true`, `"types": []`. The empty `types` array hides `@types/node` — `process`, `Buffer`, etc. are `unknown` to TypeScript. Compiles only because `strict: false` allows implicit `any`. TypeScript 6.x with `ignoreDeprecations: "6.0"`.
+- **Prisma:** Uses `@prisma/adapter-better-sqlite3` (not default Node adapter). See `src/prisma.ts`. Prisma 7 with `prisma-client` generator (not legacy `prisma-client-js`). Config in `prisma.config.ts`.
+- **Build copies templates:** `npm run build` copies `src/templates/` → `dist/templates/` for magic-link email HTML.
 
 ## Environment
 
@@ -58,11 +77,12 @@ SMTP_PASS=<app-password>
 
 ## Code style
 
-- Prettier: `semi: true`, `singleQuote: true`, `trailingComma: 'es5'`, `bracketSpacing: true`, `bracketSameLine: true`. No explicit `tabWidth` (defaults to 2).
-- `.editorconfig` specifies 4-space indent — **use Prettier as source of truth** (2 spaces).
-- ESLint 10 is installed but has **no config file** — it won't do anything.
+- Prettier (root `.prettierrc`): `semi: true`, `singleQuote: true`, `trailingComma: 'es5'`, `bracketSpacing: true`, `bracketSameLine: true` (2-space indent).
+- `.editorconfig` says 4-space — **Prettier wins** (2 spaces).
+- ESLint 10 is installed on backend but has **no config file** — does nothing. Frontend has a working ESLint 9 config (`eslint.config.js`).
 
 ## Gotchas
 
-- Root `.gitignore` only covers `node_modules`. The backend `.gitignore` covers `dist/`, `.env`, `dev.db`, and `src/generated/prisma/`. Running `git add .` from root can stage secrets.
-- Frontend workspace is empty — don't look for code there.
+- Root `.gitignore` only covers `node_modules`. Backend `.gitignore` covers `dist/`, `.env`, `dev.db`, `uploads/`, and `src/generated/prisma/`. Running `git add .` from root can stage secrets.
+- README endpoint table is stale — register and login are **POST**, not GET. Trust `src/routes/authRoutes.ts`.
+- Frontend `components.json` uses shadcn style `radix-vega` — new components should match.

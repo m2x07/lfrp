@@ -60,9 +60,18 @@ export async function getAllPost(
                       }
                     : {}),
             },
-            include: {
+            select: {
+                id: true,
+                title: true,
+                content: true,
+                type: true,
+                location: true,
+                category: true,
+                authorEmail: true,
+                createdAt: true,
+                attachments: true,
                 author: {
-                    select: { name: true },
+                    select: { name: true, contactNumber: true },
                 },
             },
             orderBy: { createdAt: 'desc' },
