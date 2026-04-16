@@ -30,6 +30,7 @@ model Post {
     id          Int       @id @default(autoincrement())
     title       String
     content     String?
+    type        Type      @default(LOST)
     location    String
     published   Boolean   @default(true)
     createdAt   DateTime  @default(now())
@@ -60,4 +61,9 @@ enum Category {
 enum Role {
     USER
     ADMIN
+}
+
+enum Type {
+    LOST
+    FOUND
 }

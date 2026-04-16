@@ -1,16 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../prisma.js';
 import { AppError, AppRequest } from '../types.js';
+import { Type } from '../generated/prisma/enums.js';
 
 export async function getAllPost(
     req: Request,
     res: Response,
     next: NextFunction
 ) {
+    const type = req.query.type as Type;
+
+    if (!type) {
+        return next(new AppError(400, "'type' field is required"));
+    }
+
     try {
         const posts = await prisma.post.findMany({
             where: {
                 published: true,
+                type: type,
             },
         });
         res.json(posts);
@@ -25,7 +33,7 @@ export async function createNewPost(
     res: Response,
     next: NextFunction
 ) {
-    const { title, content, location, category } = req.body;
+    const { title, content, location, category, type } = req.body;
     try {
         const post = await prisma.post.create({
             data: {
@@ -34,6 +42,7 @@ export async function createNewPost(
                 location: location,
                 authorEmail: req.user.email,
                 category: category,
+                type: type,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             },
