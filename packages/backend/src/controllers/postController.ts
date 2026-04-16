@@ -1,7 +1,36 @@
 import { Request, Response, NextFunction } from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
 import { prisma } from '../prisma.js';
 import { AppError, AppRequest } from '../types.js';
 import { Type } from '../generated/prisma/enums.js';
+import { hashFile } from '../utils/hash.js';
+import config from '../config/config.js';
+
+function processFiles(
+    files: Express.Multer.File[] | undefined
+): string[] | null {
+    if (!files || files.length === 0) return null;
+    const filenames: string[] = [];
+    for (const file of files) {
+        const filename = hashFile(file.buffer, file.mimetype);
+        const filePath = path.join(config.uploadDir, filename);
+        fs.writeFileSync(filePath, file.buffer);
+        filenames.push(filename);
+    }
+    return filenames;
+}
+
+async function deleteFiles(attachmentsJson: string | null) {
+    if (!attachmentsJson) return;
+    const filenames: string[] = JSON.parse(attachmentsJson);
+    for (const name of filenames) {
+        const filePath = path.join(config.uploadDir, name);
+        if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+        }
+    }
+}
 
 export async function getAllPost(
     req: Request,
@@ -23,7 +52,6 @@ export async function getAllPost(
         });
         res.json(posts);
     } catch (error) {
-        // res.status(501).json({ message: "server error" });
         next(error);
     }
 }
@@ -35,6 +63,9 @@ export async function createNewPost(
 ) {
     const { title, content, location, category, type } = req.body;
     try {
+        const filenames = processFiles(
+            req.files as Express.Multer.File[] | undefined
+        );
         const post = await prisma.post.create({
             data: {
                 title: title,
@@ -43,6 +74,7 @@ export async function createNewPost(
                 authorEmail: req.user.email,
                 category: category,
                 type: type,
+                attachments: filenames ? JSON.stringify(filenames) : null,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             },
@@ -70,7 +102,6 @@ export async function updatePost(
         res.status(400).json({ message: 'Invalid post id' });
         return;
     }
-    // check if post that is being edited is by the same user
     try {
         const toEdit = await prisma.post.findFirst({
             where: {
@@ -86,22 +117,30 @@ export async function updatePost(
     }
 
     try {
+        const files = req.files as Express.Multer.File[] | undefined;
+        const filenames = processFiles(files);
+        const data: Record<string, any> = {
+            title: title,
+            content: content,
+            location: location,
+            category: category,
+            updatedAt: new Date().toISOString(),
+        };
+        if (filenames) {
+            const existing = await prisma.post.findUnique({ where: { id } });
+            await deleteFiles(existing?.attachments ?? null);
+            data.attachments = JSON.stringify(filenames);
+        }
+
         const post = await prisma.post.update({
             where: {
                 id: id,
                 authorEmail: req.user.email,
             },
-            data: {
-                title: title,
-                content: content,
-                location: location,
-                category: category,
-                updatedAt: new Date().toISOString(),
-            },
+            data,
         });
         res.json(post);
     } catch (error: any) {
-        // res.status(501).json({ message: "server error" });
         if (error.code == 'P2025') {
             error.message = 'post does not exist';
         }
@@ -125,7 +164,6 @@ export async function deletePost(
         return;
     }
 
-    // check if post that is being deleted is by the same user
     try {
         const toEdit = await prisma.post.findFirst({
             where: {
@@ -152,7 +190,6 @@ export async function deletePost(
         });
         res.json({ message: 'post deleted' });
     } catch (error: any) {
-        // res.status(501).json({ message: "server error" });
         if (error.code == 'P2025') {
             error.message = 'post does not exist';
         }

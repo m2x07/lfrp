@@ -1,4 +1,6 @@
 import express, { Response } from 'express';
+import fs from 'node:fs';
+import path from 'node:path';
 import config from './config/config.js';
 import { authHandler } from './middlewares/authHandler.js';
 import { errorHandler } from './middlewares/errorHandler.js';
@@ -9,6 +11,12 @@ import authRouter from './routes/authRoutes.js';
 
 const app = express();
 app.use(express.json());
+
+if (!fs.existsSync(config.uploadDir)) {
+    fs.mkdirSync(config.uploadDir, { recursive: true });
+}
+
+app.use('/uploads/images', express.static(config.uploadDir));
 
 app.get('/ping', authHandler, (req: AppRequest, res: Response) => {
     res.send(`PING! @ ${new Date().toLocaleString()}`);
@@ -22,7 +30,6 @@ async function main() {
         console.log(`Server running on port ${config.port}`);
     });
 
-    // cleanup
     setInterval(async () => {
         const deleted = await prisma.authRequest.deleteMany({
             where: { expiresAt: { lt: new Date() } },
