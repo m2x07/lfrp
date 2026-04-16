@@ -25,6 +25,9 @@ export async function login(req: Request, res: Response, next: NextFunction) {
                 email: e,
             },
         });
+        if (!user) {
+            return next(new AppError(404, "No such user found"))
+        }
         const encoded = jwt.sign(
             { email: user.email, role: user.role },
             config.jwtSecret
@@ -35,6 +38,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
         // if (error.code === 'ERR_DLOPEN_FAILED') {
         //     next(new AppError(400, 'user non-existent'));
         // }
+        // console.log(error)
         next(error);
     }
 }
@@ -58,7 +62,7 @@ export async function register(
         });
 
         if (existing?.verified) {
-            return next(new AppError(400, 'user already exists'));
+            return next(new AppError(409, 'User already exists'));
         }
 
         const user = existing
@@ -86,7 +90,7 @@ export async function register(
 
         await sendMagicLink(user.email, token);
 
-        res.json({ message: 'magic link sent to your email' });
+        res.json({ message: 'Check your email for a verificatio link' });
     } catch (error) {
         console.log(error);
         next(error);
@@ -97,7 +101,7 @@ export async function status(req: Request, res: Response, next: NextFunction) {
     const e = req.query.email as string;
 
     if (!e) {
-        return next(new AppError(401, 'invalid status check request'));
+        return next(new AppError(400, 'invalid status check request'));
     }
 
     try {
@@ -130,14 +134,14 @@ export async function verify(req: Request, res: Response, next: NextFunction) {
         },
     });
 
-    if (authRequest.expiresAt <= new Date()) {
-        return next(new AppError(401, 'token expired'));
-    }
-
     if (!authRequest) {
         return next(
-            new AppError(401, 'invalid or expired auth verification token')
+            new AppError(400, 'Invalid or expired auth verification token')
         );
+    }
+
+    if (authRequest.expiresAt <= new Date()) {
+        return next(new AppError(400, 'token expired'));
     }
 
     const [deletedAuthToken, verifiedUser] = await prisma.$transaction([
@@ -150,5 +154,5 @@ export async function verify(req: Request, res: Response, next: NextFunction) {
         }),
     ]);
 
-    res.json({ message: 'user verified successfully' });
+    res.json({ message: 'User verified successfully' });
 }

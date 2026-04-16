@@ -1,5 +1,6 @@
 import multer from 'multer';
 import config from './config.js';
+import { AppError } from '../types.js';
 
 const ALLOWED_MIMETYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -15,7 +16,7 @@ const upload = multer({
         if (ALLOWED_MIMETYPES.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error(`Unsupported file type: ${file.mimetype}`));
+            cb(new AppError(415, `Unsupported file type: ${file.mimetype}`));
         }
     },
 });

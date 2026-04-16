@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { prisma } from '../prisma.js';
 import { AppError, AppRequest } from '../types.js';
-import { Type } from '../generated/prisma/enums.js';
+import { Type, Category } from '../generated/prisma/enums.js';
 import { hashFile } from '../utils/hash.js';
 import config from '../config/config.js';
 
@@ -38,6 +38,8 @@ export async function getAllPost(
     next: NextFunction
 ) {
     const type = req.query.type as Type;
+    const category = req.query.category as Category | undefined;
+    const search = req.query.search as string | undefined;
 
     if (!type) {
         return next(new AppError(400, "'type' field is required"));
@@ -48,9 +50,28 @@ export async function getAllPost(
             where: {
                 published: true,
                 type: type,
+                ...(category ? { category } : {}),
+                ...(search
+                    ? {
+                          OR: [
+                              { title: { contains: search } },
+                              { content: { contains: search } },
+                          ],
+                      }
+                    : {}),
             },
+            include: {
+                author: {
+                    select: { name: true },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
         });
-        res.json(posts);
+        const parsed = posts.map((p) => ({
+            ...p,
+            attachments: p.attachments ? JSON.parse(p.attachments) : [],
+        }));
+        res.json(parsed);
     } catch (error) {
         next(error);
     }
@@ -94,13 +115,11 @@ export async function updatePost(
 
     const rawId = req.params.id;
     if (!rawId || Array.isArray(rawId)) {
-        res.status(400).json({ message: 'Missing post id' });
-        return;
+        return next(new AppError(400, 'Missing post id'));
     }
     const id = parseInt(rawId, 10);
     if (isNaN(id)) {
-        res.status(400).json({ message: 'Invalid post id' });
-        return;
+        return next(new AppError(400, 'Invalid post id'));
     }
     try {
         const toEdit = await prisma.post.findFirst({
@@ -110,7 +129,7 @@ export async function updatePost(
         });
 
         if (toEdit.authorEmail !== req.user.email) {
-            return next(new AppError(406, 'Not Acceptable'));
+            return next(new AppError(403, 'Forbidden'));
         }
     } catch (error) {
         return next(error);
@@ -142,7 +161,7 @@ export async function updatePost(
         res.json(post);
     } catch (error: any) {
         if (error.code == 'P2025') {
-            error.message = 'post does not exist';
+            return next(new AppError(404, 'post does not exist'));
         }
         next(error);
     }
@@ -155,13 +174,11 @@ export async function deletePost(
 ) {
     const rawId = req.params.id;
     if (!rawId || Array.isArray(rawId)) {
-        res.status(400).json({ message: 'Missing post id' });
-        return;
+        return next(new AppError(400, 'Missing post id'));
     }
     const id = parseInt(rawId, 10);
     if (isNaN(id)) {
-        res.status(400).json({ message: 'Invalid post id' });
-        return;
+        return next(new AppError(400, 'Invalid post id'));
     }
 
     try {
@@ -172,7 +189,7 @@ export async function deletePost(
         });
 
         if (toEdit.authorEmail !== req.user.email) {
-            return next(new AppError(406, 'Not Acceptable'));
+            return next(new AppError(403, 'Forbidden'));
         }
     } catch (error) {
         return next(error);
@@ -191,7 +208,7 @@ export async function deletePost(
         res.json({ message: 'post deleted' });
     } catch (error: any) {
         if (error.code == 'P2025') {
-            error.message = 'post does not exist';
+            return next(new AppError(404, 'post does not exist'));
         }
         next(error);
     }

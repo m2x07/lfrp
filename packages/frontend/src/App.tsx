@@ -1,7 +1,35 @@
+import { Fragment } from 'react/jsx-runtime';
+import { Route, Switch } from 'wouter';
+import { Toaster } from '@/components/ui/sonner';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import NewPost from './pages/NewPost';
+import Home from './pages/Home';
+
 function App() {
     return (
-        <h1>hello world</h1>
-    )
-}
+        <Fragment>
+            <Switch>
+                <Route path="/login" component={Login} />
+                <Route path="/register" component={Register} />
 
+                <Route path="/new">
+                    <ProtectedRoute>
+                        <NewPost />
+                    </ProtectedRoute>
+                </Route>
+
+                <Route path="/">
+                    <ProtectedRoute>
+                        <Home />
+                    </ProtectedRoute>
+                </Route>
+
+                <Route>404: Page not found</Route>
+            </Switch>
+            <Toaster />
+        </Fragment>
+    );
+}
 export default App;
