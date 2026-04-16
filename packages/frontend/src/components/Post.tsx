@@ -66,7 +66,7 @@ export function Post({
     async function handleDelete() {
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:3000/api/post/${id}`, {
+            const res = await fetch(`/api/post/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -135,7 +135,7 @@ export function Post({
                     <div className="w-1/2 overflow-hidden">
                         {images[0] ? (
                             <img
-                                src={`http://localhost:3000/uploads/images/${images[0]}`}
+                                src={`/uploads/images/${images[0]}`}
                                 alt=""
                                 className="size-full cursor-pointer object-cover"
                                 onClick={() => setPreview(images[0])}
@@ -147,7 +147,7 @@ export function Post({
                     <div className="w-1/2 overflow-hidden">
                         {images[1] ? (
                             <img
-                                src={`http://localhost:3000/uploads/images/${images[1]}`}
+                                src={`/uploads/images/${images[1]}`}
                                 alt=""
                                 className="size-full cursor-pointer object-cover"
                                 onClick={() => setPreview(images[1])}
@@ -175,7 +175,7 @@ export function Post({
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
                     onClick={() => setPreview(null)}>
                     <img
-                        src={`http://localhost:3000/uploads/images/${preview}`}
+                        src={`/uploads/images/${preview}`}
                         alt=""
                         className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"
                         onClick={(e) => e.stopPropagation()}

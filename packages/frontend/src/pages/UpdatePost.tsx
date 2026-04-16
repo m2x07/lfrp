@@ -94,14 +94,11 @@ function UpdatePost() {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch(
-                `http://localhost:3000/api/post/${state.id}`,
-                {
-                    method: 'PUT',
-                    headers: { Authorization: `Bearer ${token}` },
-                    body: formData,
-                }
-            );
+            const res = await fetch(`/api/post/${state.id}`, {
+                method: 'PUT',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formData,
+            });
 
             const result = await res.json();
 

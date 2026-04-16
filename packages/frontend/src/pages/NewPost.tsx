@@ -76,7 +76,7 @@ function NewPost() {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await fetch('http://localhost:3000/api/post', {
+            const res = await fetch('/api/post', {
                 method: 'POST',
                 headers: { Authorization: `Bearer ${token}` },
                 body: formData,

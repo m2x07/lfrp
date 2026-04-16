@@ -23,6 +23,13 @@ app.get('/ping', authHandler, (req: AppRequest, res: Response) => {
 });
 app.use('/api/auth', authRouter);
 app.use('/api/post', postRouter);
+
+const frontendDist = path.join(process.cwd(), '..', 'frontend', 'dist');
+app.use(express.static(frontendDist));
+app.get('/{*splat}', (req, res) => {
+    res.sendFile(path.join(frontendDist, 'index.html'));
+});
+
 app.use(errorHandler);
 
 async function main() {

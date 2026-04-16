@@ -61,7 +61,7 @@ async function fetchPosts(
     const params = new URLSearchParams({ type });
     if (category !== 'ALL') params.set('category', category);
     if (search.trim()) params.set('search', search.trim());
-    const res = await fetch(`http://localhost:3000/api/post?${params}`, {
+    const res = await fetch(`/api/post?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) throw new Error('Failed to fetch posts.');
