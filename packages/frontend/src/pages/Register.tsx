@@ -61,7 +61,7 @@ function Register() {
                 throw new Error(result.message || 'Registration failed.');
             }
 
-            toast.success('Check your email for a verification link.');
+            toast.success(result.message);
         } catch (err) {
             const message =
                 err instanceof Error ? err.message : 'Registration failed.';

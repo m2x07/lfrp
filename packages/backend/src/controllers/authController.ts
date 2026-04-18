@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../prisma.js';
-import { AppError, MyTokenPayload } from '../types.js';
-import { User } from '../generated/prisma/client.js';
+import { AppError } from '../types.js';
 import jwt from 'jsonwebtoken';
 import config from '../config/config.js';
 import crypto from 'crypto';
-import { sendMagicLink } from '../services/mail.js';
+import { sendLoginOtp } from '../services/mail.js';
 
 const TOKEN_EXPIRY_MINUTES = 10;
 
@@ -18,21 +17,32 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     if (!req.body) {
         return next(new AppError(400, 'no email provided'));
     }
-    const e = req.body.email;
+    const email = req.body.email;
     try {
         const user = await prisma.user.findUnique({
             where: {
-                email: e,
+                email: email,
             },
         });
         if (!user) {
             return next(new AppError(404, 'No such user found'));
         }
-        const encoded = jwt.sign(
-            { email: user.email, role: user.role },
-            config.jwtSecret
-        );
-        res.json({ auth_token: encoded });
+        const buffer = new Uint32Array(1);
+        crypto.randomFillSync(buffer);
+        const otp = (buffer[0] % 900000) + 100000;
+
+        const pendingAuthRequest = await prisma.authRequest.upsert({
+            where: { email: email },
+            update: { otp: otp, expiresAt: expiryDate() },
+            create: {
+                email: email,
+                otp: otp,
+                expiresAt: expiryDate()
+            }
+        })
+        await sendLoginOtp(email, otp)
+
+        res.json({ message: 'Check your email for OTP' })
     } catch (error) {
         // FIX: correct error checking here
         // if (error.code === 'ERR_DLOPEN_FAILED') {
@@ -68,85 +78,50 @@ export async function register(
         const user = existing
             ? existing
             : await prisma.user.create({
-                  data: {
-                      email: req.body.email,
-                      name: req.body.name,
-                      contactNumber: req.body.contactNumber,
-                      role: 'USER',
-                      verified: false,
-                  },
-              });
-        const token = crypto.randomBytes(32).toString('hex');
+                data: {
+                    email: req.body.email,
+                    name: req.body.name,
+                    contactNumber: req.body.contactNumber,
+                    role: 'USER',
+                    verified: false,
+                },
+            });
+        // const token = crypto.randomBytes(32).toString('hex');
 
-        const pendingAuthRequest = await prisma.authRequest.upsert({
-            where: { email: user.email },
-            update: { token: token, expiresAt: expiryDate() },
-            create: {
-                email: user.email,
-                token: token,
-                expiresAt: expiryDate(),
-            },
-        });
-
-        await sendMagicLink(user.email, token);
-
-        res.json({ message: 'Check your email for a verificatio link' });
+        res.json({ message: 'Account registered. Please login with your email' });
     } catch (error) {
         console.log(error);
         next(error);
     }
 }
 
-export async function status(req: Request, res: Response, next: NextFunction) {
-    const e = req.query.email as string;
-
-    if (!e) {
-        return next(new AppError(400, 'invalid status check request'));
-    }
-
-    try {
-        const user = await prisma.user.findUnique({
-            where: { email: e },
-        });
-        if (!user.verified) {
-            return res.json({ verified: false });
-        }
-        const token = jwt.sign(
-            { email: user.email, role: user.role },
-            config.jwtSecret
-        );
-        res.json({ verified: true, authToken: token });
-    } catch (error) {
-        // FIX: correct error checking here
-        // if (error.code === 'ERR_DLOPEN_FAILED') {
-        //     next(new AppError(400, 'user non-existent'));
-        // }
-        next(error);
-    }
-}
-
 export async function verify(req: Request, res: Response, next: NextFunction) {
-    const token = req.query.token as string;
+    const email = req.body.email;
+    const userOtp = req.body.otp as number;
 
     const authRequest = await prisma.authRequest.findUnique({
         where: {
-            token: token,
+            email: email,
         },
     });
 
     if (!authRequest) {
         return next(
-            new AppError(400, 'Invalid or expired auth verification token')
+            new AppError(400, 'Invalid or expired session. Login again')
         );
     }
 
     if (authRequest.expiresAt <= new Date()) {
-        return next(new AppError(400, 'token expired'));
+        return next(new AppError(400, 'OTP expired'));
     }
 
-    const [deletedAuthToken, verifiedUser] = await prisma.$transaction([
+    if (userOtp !== authRequest.otp) {
+        return next(new AppError(400, 'OTP invalid'));
+    }
+
+    const [, verifiedUser] = await prisma.$transaction([
         prisma.authRequest.delete({
-            where: { token: token },
+            where: { email: email },
         }),
         prisma.user.update({
             where: { email: authRequest.email },
@@ -154,6 +129,10 @@ export async function verify(req: Request, res: Response, next: NextFunction) {
         }),
     ]);
 
-    // res.json({ message: 'User verified successfully' });
-    res.send('<h2>User verified successfully</h2>');
+    const token = jwt.sign(
+        { email: verifiedUser.email, role: verifiedUser.role },
+        config.jwtSecret
+    );
+
+    res.json({ authToken: token });
 }

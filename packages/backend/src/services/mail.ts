@@ -20,19 +20,31 @@ function loadTemplate(filename: string): string {
     return readFileSync(templatePath, 'utf-8');
 }
 
-export async function sendMagicLink(email: string, token: string) {
-    const frontendUrl = process.env.AUTH_VERIFY_URL || 'http://localhost:3000';
-    const magicLink = `${frontendUrl}/api/auth/verify?token=${token}`;
+// export async function sendRegistrationMail(email: string, otp: number) {
+//
+//     const html = loadTemplate('verify-account.html').replace(
+//         '{{OTP}}',
+//         otp.toString()
+//     );
+//
+//     await transporter.sendMail({
+//         from: `"LFRP" <${config.smtpUser}>`,
+//         to: email,
+//         subject: 'Complete your LFRP account registration',
+//         html,
+//     });
+// }
 
-    const html = loadTemplate('magic-link.html').replace(
-        '{{MAGIC_LINK_URL}}',
-        magicLink
-    );
+export async function sendLoginOtp(email: string, otp: number) {
+    const html = loadTemplate('login-otp.html').replace(
+        '{{OTP}}',
+        otp.toString()
+    )
 
     await transporter.sendMail({
         from: `"LFRP" <${config.smtpUser}>`,
         to: email,
-        subject: 'Welcome to LFRP',
+        subject: 'Your OTP for LFRP login',
         html,
-    });
+    })
 }

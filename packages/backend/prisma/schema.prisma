@@ -45,7 +45,7 @@ model AuthRequest {
     id        Int      @id @default(autoincrement())
     email     String   @unique
     user      User?    @relation(fields: [email], references: [email])
-    token     String   @unique
+    otp       Int
     createdAt DateTime @default(now())
     expiresAt DateTime
 }
