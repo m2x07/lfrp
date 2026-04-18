@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import fs from 'node:fs';
+import { unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { prisma } from '../prisma.js';
 import { AppError, AppRequest } from '../types.js';
@@ -23,12 +24,26 @@ function processFiles(
 
 async function deleteFiles(attachmentsJson: string | null) {
     if (!attachmentsJson) return;
-    const filenames: string[] = JSON.parse(attachmentsJson);
-    for (const name of filenames) {
-        const filePath = path.join(config.uploadDir, name);
-        if (fs.existsSync(filePath)) {
-            fs.unlinkSync(filePath);
-        }
+
+    try {
+        const filenames: string[] = JSON.parse(attachmentsJson);
+
+        // Use Promise.all to delete files in parallel for better speed
+        await Promise.all(
+            filenames.map(async (name) => {
+                const filePath = path.join(config.uploadDir, name);
+                try {
+                    await unlink(filePath);
+                } catch (err: any) {
+                    // Ignore "File not found" errors, but log others
+                    if (err.code !== 'ENOENT') {
+                        console.error(`Failed to delete ${name}:`, err);
+                    }
+                }
+            })
+        );
+    } catch (parseError) {
+        console.error("Invalid JSON provided to deleteFiles", parseError);
     }
 }
 
@@ -53,11 +68,11 @@ export async function getAllPost(
                 ...(category ? { category } : {}),
                 ...(search
                     ? {
-                          OR: [
-                              { title: { contains: search } },
-                              { content: { contains: search } },
-                          ],
-                      }
+                        OR: [
+                            { title: { contains: search } },
+                            { content: { contains: search } },
+                        ],
+                    }
                     : {}),
             },
             select: {

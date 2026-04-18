@@ -131,32 +131,39 @@ export function Post({
                         </DropdownMenu>
                     )}
                 </CardHeader>
-                <div className="flex aspect-video overflow-hidden">
-                    <div className="w-1/2 overflow-hidden">
-                        {images[0] ? (
-                            <img
-                                src={`/uploads/images/${images[0]}`}
-                                alt=""
-                                className="size-full cursor-pointer object-cover"
-                                onClick={() => setPreview(images[0])}
-                            />
-                        ) : (
-                            <div className="size-full bg-muted" />
-                        )}
+
+                {images.length > 0 ? (
+                    <div className="flex aspect-video overflow-hidden">
+                        <div className="w-1/2 overflow-hidden">
+                            {images[0] ? (
+                                <img
+                                    src={`/uploads/images/${images[0]}`}
+                                    alt=""
+                                    className="size-full cursor-pointer object-cover"
+                                    onClick={() => setPreview(images[0])}
+                                />
+                            ) : (
+                                <div className="size-full bg-muted" />
+                            )}
+                        </div>
+                        <div className="w-1/2 overflow-hidden">
+                            {images[1] ? (
+                                <img
+                                    src={`/uploads/images/${images[1]}`}
+                                    alt=""
+                                    className="size-full cursor-pointer object-cover"
+                                    onClick={() => setPreview(images[1])}
+                                />
+                            ) : (
+                                <div className="size-full bg-muted" />
+                            )}
+                        </div>
                     </div>
-                    <div className="w-1/2 overflow-hidden">
-                        {images[1] ? (
-                            <img
-                                src={`/uploads/images/${images[1]}`}
-                                alt=""
-                                className="size-full cursor-pointer object-cover"
-                                onClick={() => setPreview(images[1])}
-                            />
-                        ) : (
-                            <div className="size-full bg-muted" />
-                        )}
-                    </div>
-                </div>
+
+                ) : (
+                    null
+                )}
+
                 <CardContent>
                     <CardTitle>{title}</CardTitle>
                     <CardDescription>{description}</CardDescription>
